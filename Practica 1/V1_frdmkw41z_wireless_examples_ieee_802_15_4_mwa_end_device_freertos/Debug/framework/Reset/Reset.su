@@ -1,2 +1,2 @@
-C:\Users\fabri\Documents\ITESO\Noveno Semestre\Redes\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_end_device_freertos\CMSIS/core_cm0plus.h:846:22:NVIC_SystemReset	8	static
+C:\Users\dafga\Documents\MCUXpressoIDE_25.6.136\workspace\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_end_device_freertos\CMSIS/core_cm0plus.h:846:22:NVIC_SystemReset	8	static
 ../framework/Reset/Reset.c:39:6:ResetMCU	8	static

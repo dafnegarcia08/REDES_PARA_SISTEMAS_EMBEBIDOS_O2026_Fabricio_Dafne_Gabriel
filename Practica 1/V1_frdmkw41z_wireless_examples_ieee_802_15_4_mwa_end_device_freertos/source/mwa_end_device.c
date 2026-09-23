@@ -1220,64 +1220,150 @@ static void App_HandleKeys
   key_event_t events  /*IN: Events from keyboard modul */
   )
 {
-#if gKBD_KeysCount_c > 0
-    switch ( events )
-    {
-    case gKBD_EventLongSW1_c:
-    	OSA_EventSet(mAppEvent, gAppEvtPressedRestoreNvmBut_c);
-        break;
+//#if gKBD_KeysCount_c > 0
+//    switch ( events )
+//    {
+//    case gKBD_EventLongSW1_c:
+//    	OSA_EventSet(mAppEvent, gAppEvtPressedRestoreNvmBut_c);
+//        break;
+//
+//    // Case when the physical SW3 button was pressed
+//    case gKBD_EventSW2_c:
+//    	if(gState == stateListen) // Check if the End Device is connected to the coordinator
+//        {
+//    		MyTask_SW3_Pressed(); // Call the bridge function for the SW3 defined in "MyNewTask.c"
+//        }
+//        else if(gState == stateInit)
+//        {
+//            LED_StopFlashingAllLeds();
+//            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
+//        }
+//        break;
+//
+//    case gKBD_EventSW3_c:
+//    case gKBD_EventSW4_c:
+//    	if(gState == stateListen)
+//        {
+//    		MyTask_SW4_Pressed();
+//        }
+//        else if(gState == stateInit)
+//        {
+//        	LED_StopFlashingAllLeds();
+//            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
+//        }
+//        break;
+//
+//    case gKBD_EventSW1_c:
+//    //case gKBD_EventSW4_c:
+//    case gKBD_EventLongSW2_c:
+//    case gKBD_EventLongSW3_c:
+//    case gKBD_EventLongSW4_c:
+//#if gTsiSupported_d
+//    case gKBD_EventSW5_c:
+//    case gKBD_EventSW6_c:
+//#endif
+//#if gTsiSupported_d
+//    case gKBD_EventLongSW5_c:
+//    case gKBD_EventLongSW6_c:
+//#endif
+//        if(gState == stateInit)
+//        {
+//            LED_StopFlashingAllLeds();
+//            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
+//        }
+//        break;
+//
+//    default:
+//        break;
+//    }
+//#endif
+//}
 
-    // Case when the physical SW3 button was pressed
-    case gKBD_EventSW2_c:
-    	if(gState == stateListen) // Check if the End Device is connected to the coordinator
-        {
-    		MyTask_SW3_Pressed(); // Call the bridge function for the SW3 defined in "MyNewTask.c"
-        }
-        else if(gState == stateInit)
-        {
-            LED_StopFlashingAllLeds();
-            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
-        }
-        break;
+	#if gKBD_KeysCount_c > 0
 
-    case gKBD_EventSW3_c:
-    case gKBD_EventSW4_c:
-    	if(gState == stateListen)
-        {
-    		MyTask_SW4_Pressed();
-        }
-        else if(gState == stateInit)
-        {
-        	LED_StopFlashingAllLeds();
-            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
-        }
-        break;
+	    switch(events)
+	    {
+	        /* Physical SW3 */
+	        case gKBD_EventSW2_c:
 
-    case gKBD_EventSW1_c:
-    //case gKBD_EventSW4_c:
-    case gKBD_EventLongSW2_c:
-    case gKBD_EventLongSW3_c:
-    case gKBD_EventLongSW4_c:
-#if gTsiSupported_d
-    case gKBD_EventSW5_c:
-    case gKBD_EventSW6_c:
-#endif
-#if gTsiSupported_d
-    case gKBD_EventLongSW5_c:
-    case gKBD_EventLongSW6_c:
-#endif
-        if(gState == stateInit)
-        {
-            LED_StopFlashingAllLeds();
-            OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
-        }
-        break;
+	            if(gState == stateListen)
+	            {
+	                MyTask_SW3_Pressed();
+	            }
+	            else if(gState == stateInit)
+	            {
+	                LED_StopFlashingAllLeds();
+	                OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
+	            }
 
-    default:
-        break;
-    }
-#endif
-}
+	            break;
+
+
+	        /* Physical SW4 */
+	        case gKBD_EventSW1_c:
+
+	            if(gState == stateListen)
+	            {
+	                MyTask_SW4_Pressed();
+	            }
+	            else if(gState == stateInit)
+	            {
+	                LED_StopFlashingAllLeds();
+	                OSA_EventSet(mAppEvent, gAppEvtDummyEvent_c);
+	            }
+
+	            break;
+
+
+	        case gKBD_EventLongSW1_c:
+
+	            OSA_EventSet(
+	                mAppEvent,
+	                gAppEvtPressedRestoreNvmBut_c
+	            );
+
+	            break;
+
+
+	        case gKBD_EventSW3_c:
+	        case gKBD_EventSW4_c:
+	        case gKBD_EventLongSW2_c:
+	        case gKBD_EventLongSW3_c:
+	        case gKBD_EventLongSW4_c:
+
+	#if gTsiSupported_d
+	        case gKBD_EventSW5_c:
+	        case gKBD_EventSW6_c:
+	        case gKBD_EventLongSW5_c:
+	        case gKBD_EventLongSW6_c:
+	#endif
+
+	            if(gState == stateInit)
+	            {
+	                LED_StopFlashingAllLeds();
+	                OSA_EventSet(
+	                    mAppEvent,
+	                    gAppEvtDummyEvent_c
+	                );
+	            }
+
+	            break;
+
+
+	        default:
+	            break;
+	    }
+
+	#endif
+	}
+
+
+
+
+
+
+
+
 /******************************************************************************
 * The following functions are called by the MAC to put messages into the
 * Application's queue. They need to be defined even if they are not used

@@ -84,6 +84,7 @@ void My_Task(osaTaskParam_t argument)
 
 		/* Depending on the received event */
 		switch(customEvent){
+
 		case gMyNewTaskEvent1_c:
 			TMR_StartIntervalTimer(myTimerID, /*myTimerID*/
 					4000, /* Timer's Timeout */
