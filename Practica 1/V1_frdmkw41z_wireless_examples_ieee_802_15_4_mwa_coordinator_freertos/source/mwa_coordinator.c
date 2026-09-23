@@ -1141,7 +1141,7 @@ static int8_t App_FindNode(uint64_t extAddr)
     uint8_t i;
     for(i = 0; i < MaxHistoryNodes; i++)
     {
-        if(NodeTable[i].inUse && NodeTable[i].extAddress == extAddr)
+        if(NodeTable[i].extAddress == extAddr)
             return i;
     }
     return -1;
@@ -1152,8 +1152,8 @@ static int8_t App_FindFreeSlot(void)
     uint8_t i;
     for(i = 0; i < MaxHistoryNodes; i++)
     {
-        if(!NodeTable[i].inUse)
-            return i;
+    	if(NodeTable[i].extAddress == 0)   /* nunca se ha usado este slot */
+    		return i;
     }
     return -1;
 }

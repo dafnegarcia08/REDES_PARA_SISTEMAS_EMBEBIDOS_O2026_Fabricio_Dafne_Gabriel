@@ -21,7 +21,7 @@
 /* Definiciones necesarias para la tarea */
 #define MaxNodes 5
 #define MaxHistoryNodes 10
-#define mNodeMissThreshold_c 2
+#define NodeMissThreshold 2
 
 /* La estructura debe vivir aquí para que my_new_task.c pueda verla */
 typedef struct

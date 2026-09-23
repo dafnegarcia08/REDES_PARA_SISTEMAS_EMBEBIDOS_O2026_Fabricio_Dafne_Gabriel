@@ -49,13 +49,13 @@ static void App_NodeCheckTimerCallback(void *param)
 {
     uint8_t i;
 
-    for(i = 0; i < MaxNodes; i++)
+    for(i = 0; i < MaxHistoryNodes; i++)
     {
         if(NodeTable[i].inUse)
         {
             NodeTable[i].missedCount++;
 
-            if(NodeTable[i].missedCount >= mNodeMissThreshold_c)
+            if(NodeTable[i].missedCount >= NodeMissThreshold)
             {
                 /* Node considered disconnected: free the slot */
                 Serial_Print(interfaceId, "\n\rNode timed out, removing from table:\n\r  Extended Address: 0x", gAllowToBlock_d);

@@ -1,5 +1,5 @@
-C:\RedesEmbebidos\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\drivers/fsl_clock.h:580:20:CLOCK_EnableClock	24	static
-C:\RedesEmbebidos\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\drivers/fsl_adc16.h:500:24:ADC16_GetChannelConversionValue	16	static
+C:\Redes_ITESO\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\drivers/fsl_clock.h:580:20:CLOCK_EnableClock	24	static
+C:\Redes_ITESO\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\drivers/fsl_adc16.h:500:24:ADC16_GetChannelConversionValue	16	static
 ../board/board.c:171:6:hardware_init	16	static
 ../board/board.c:218:6:NMI_Handler	8	static
 ../board/board.c:225:6:BOARD_InitAdc	8	static

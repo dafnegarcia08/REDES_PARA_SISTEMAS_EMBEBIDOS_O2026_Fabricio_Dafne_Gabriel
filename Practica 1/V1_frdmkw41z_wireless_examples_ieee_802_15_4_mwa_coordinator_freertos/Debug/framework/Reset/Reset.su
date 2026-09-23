@@ -1,2 +1,2 @@
-C:\RedesEmbebidos\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\CMSIS/core_cm0plus.h:846:22:NVIC_SystemReset	8	static
+C:\Redes_ITESO\REDES_PARA_SISTEMAS_EMBEBIDOS_O2026_Fabricio_Dafne_Gabriel\Practica 1\V1_frdmkw41z_wireless_examples_ieee_802_15_4_mwa_coordinator_freertos\CMSIS/core_cm0plus.h:846:22:NVIC_SystemReset	8	static
 ../framework/Reset/Reset.c:39:6:ResetMCU	8	static
