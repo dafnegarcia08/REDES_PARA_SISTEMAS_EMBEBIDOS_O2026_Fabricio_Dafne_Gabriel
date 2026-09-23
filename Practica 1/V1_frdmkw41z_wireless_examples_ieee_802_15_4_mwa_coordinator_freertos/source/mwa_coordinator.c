@@ -224,9 +224,9 @@ void App_init( void )
     Serial_SetBaudRate(interfaceId, gUARTBaudRate115200_c);
     Serial_SetRxCallBack(interfaceId, UartRxCallBack, NULL);
     
-    // Inicializar la red de nodos
+    // Phase 2: clear the node association table before use
     FLib_MemSet(NodeTable, 0, sizeof(NodeTable));
-
+    // Phase 2: start the periodic keep alive check for associated nodes
     MyTaskTimer_Init();
     MyTaskTimer_Start();
 
@@ -728,6 +728,10 @@ static uint8_t App_StartCoordinator( uint8_t appInstance )
 *   errorAllocFailed:      A message buffer could not be allocated.
 *
 ******************************************************************************/
+
+/* Phase 2 (2 points): builds the Associate Response, checking the Extended Address history
+   to reuse a previously assigned Short Address or assign a new one */
+
 static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstance)
 {
   mlmeMessage_t *pMsg;
@@ -746,7 +750,7 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
 
     cap = pMsgIn->msgData.associateInd.capabilityInfo;
     FLib_MemCpy(&extAddr, &pMsgIn->msgData.associateInd.deviceAddress, 8);
-
+/* Phase 2: look up the requester by its Extended Address in the node table */
     idx = App_FindNode(extAddr);
 
     if(idx >= 0 && NodeTable[idx].inUse)
@@ -797,6 +801,7 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
 
             if(idx >= 0)
             {
+                /* Phase 2: brand new node, assign a new Short Address and store its capability info */
                 NodeTable[idx].inUse = TRUE;
                 NodeTable[idx].shortAddress = NextShortAddress++;
                 NodeTable[idx].extAddress = extAddr;
@@ -893,6 +898,7 @@ static void App_HandleMcpsInput(mcpsToNwkMessage_t *pMsgIn, uint8_t appInstance)
 
 
       /* Find which node sent this and reset its missed counter */
+      /* Phase 2: find which node sent this and reset its missed counter (keep-alive) */
       {
           uint16_t srcAddr = pMsgIn->msgData.dataInd.srcAddr;
           uint8_t i;
@@ -1134,7 +1140,7 @@ resultType_t MCPS_NWK_SapHandler (mcpsToNwkMessage_t* pMsg, instanceId_t instanc
   return gSuccess_c;
 }
 
-
+///
 
 static int8_t App_FindNode(uint64_t extAddr)
 {
@@ -1152,7 +1158,7 @@ static int8_t App_FindFreeSlot(void)
     uint8_t i;
     for(i = 0; i < MaxHistoryNodes; i++)
     {
-    	if(NodeTable[i].extAddress == 0)   /* nunca se ha usado este slot */
+    	if(NodeTable[i].extAddress == 0)   /*  slot never used before*/
     		return i;
     }
     return -1;

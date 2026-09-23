@@ -17,7 +17,7 @@ osaTaskId_t gMyTaskHandler_ID;
 
 static void App_NodeCheckTimerCallback(void *param);
 
-/* Función para inicializar/pedir el timer al sistema operativo */
+/* Phase 2 (extra): allocates the periodic timer used for node keep-alive tracking */
 void MyTaskTimer_Init(void)
 {
     if (myTimerID == gTmrInvalidTimerID_c)
@@ -26,7 +26,7 @@ void MyTaskTimer_Init(void)
     }
 }
 
-/* Función para arrancar el timer repitiéndose cada 5 segundos */
+/* Starts the keep-alive timer, repeating every 5 seconds */
 void MyTaskTimer_Start(void)
 {
     if (myTimerID != gTmrInvalidTimerID_c)
@@ -36,7 +36,7 @@ void MyTaskTimer_Start(void)
     }
 }
 
-/* Función de seguridad por si necesitas detenerlo en algún momento */
+/* Safety function in case the timer needs to be stopped at some point */
 void MyTaskTimer_Stop(void)
 {
     if (myTimerID != gTmrInvalidTimerID_c)
@@ -44,7 +44,7 @@ void MyTaskTimer_Stop(void)
         TMR_StopTimer(myTimerID);
     }
 }
-
+/* Phase 2 : periodically checks every active node and frees stale ones that stopped transmitting */
 static void App_NodeCheckTimerCallback(void *param)
 {
     uint8_t i;

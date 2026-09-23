@@ -18,12 +18,13 @@
 #include "EmbeddedTypes.h"
 #include "fsl_os_abstraction.h"
 
-/* Definiciones necesarias para la tarea */
+/* Phase 2: MaxNodes is the limit of simultaneously active associated nodes (5, per practice spec) */
 #define MaxNodes 5
 #define MaxHistoryNodes 10
 #define NodeMissThreshold 2
 
-/* La estructura debe vivir aquí para que my_new_task.c pueda verla */
+/* Phase 2 (2 points): structure that stores the info of every node that can associate to the network.
+   Declared here so it is visible from both my_new_task.c and mwa_coordinator.c */
 typedef struct
 {
     bool_t   inUse;
