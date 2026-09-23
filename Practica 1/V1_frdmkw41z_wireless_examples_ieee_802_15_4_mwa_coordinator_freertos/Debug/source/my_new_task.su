@@ -1,0 +1,4 @@
+../source/my_new_task.c:21:6:MyTaskTimer_Init	8	static
+../source/my_new_task.c:30:6:MyTaskTimer_Start	8	static
+../source/my_new_task.c:40:6:MyTaskTimer_Stop	8	static
+../source/my_new_task.c:48:13:App_NodeCheckTimerCallback	32	static

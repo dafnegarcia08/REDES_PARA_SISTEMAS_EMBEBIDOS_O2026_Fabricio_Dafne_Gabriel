@@ -16,6 +16,7 @@
 *************************************************************************************
 ********************************************************************************** */
 #include "mwa_coordinator.h"
+#include "my_new_task.h"
 
 /* Drv */
 #include "LED.h"
@@ -85,20 +86,7 @@ extern void Mac_SetExtendedAddress(uint8_t *pAddr, instanceId_t instanceId);
 *************************************************************************************
 ************************************************************************************/
 
-#define MaxNodes 5
-#define MaxHistoryNodes   10
-
-typedef struct
-{
-    bool_t   inUse;          /* Free space */
-    uint16_t shortAddress;
-    uint64_t extAddress;
-    bool_t   rxOnWhenIdle;         /* TRUE o FALSE */
-    bool_t   FFD_not_RFD;          /* TRUE = FFD, FALSE = RFD */
-    uint8_t  missedCount;
-} nodeInfo_t;
-
-static nodeInfo_t NodeTable[MaxHistoryNodes];
+nodeInfo_t NodeTable[MaxHistoryNodes];
 static uint16_t   NextShortAddress = 0x0001;
 
 
@@ -141,7 +129,7 @@ static anchor_t mMcpsNwkInputQueue;
 
 static const uint64_t mExtendedAddress = mMacExtendedAddress_c;
 static instanceId_t   macInstance;
-static uint8_t        interfaceId;
+uint8_t        interfaceId;
 osaEventId_t          mAppEvent;
 
 /************************************************************************************
@@ -239,6 +227,8 @@ void App_init( void )
     // Inicializar la red de nodos
     FLib_MemSet(NodeTable, 0, sizeof(NodeTable));
 
+    MyTaskTimer_Init();
+    MyTaskTimer_Start();
 
     /*signal app ready*/  
     LED_StartSerialFlash(LED1);

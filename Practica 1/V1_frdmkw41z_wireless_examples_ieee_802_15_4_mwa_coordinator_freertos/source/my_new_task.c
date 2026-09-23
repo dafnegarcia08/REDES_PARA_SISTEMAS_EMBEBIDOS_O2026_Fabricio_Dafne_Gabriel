@@ -5,6 +5,8 @@
  *      Author: Gabriel Gomez
  */
 
+#include "my_new_task.h"
+
 osaEventId_t mMyEvents;
 
 /* Global Variable to store our TimerID */
@@ -13,11 +15,41 @@ tmrTimerID_t myTimerID = gTmrInvalidTimerID_c;
 /* Handler ID for task */
 osaTaskId_t gMyTaskHandler_ID;
 
+static void App_NodeCheckTimerCallback(void *param);
+
+/* Función para inicializar/pedir el timer al sistema operativo */
+void MyTaskTimer_Init(void)
+{
+    if (myTimerID == gTmrInvalidTimerID_c)
+    {
+        myTimerID = TMR_AllocateTimer();
+    }
+}
+
+/* Función para arrancar el timer repitiéndose cada 5 segundos */
+void MyTaskTimer_Start(void)
+{
+    if (myTimerID != gTmrInvalidTimerID_c)
+    {
+        /* 5000 ms = 5 segundos. Llama a tu función directamente */
+        TMR_StartIntervalTimer(myTimerID, 5000, App_NodeCheckTimerCallback, NULL);
+    }
+}
+
+/* Función de seguridad por si necesitas detenerlo en algún momento */
+void MyTaskTimer_Stop(void)
+{
+    if (myTimerID != gTmrInvalidTimerID_c)
+    {
+        TMR_StopTimer(myTimerID);
+    }
+}
+
 static void App_NodeCheckTimerCallback(void *param)
 {
     uint8_t i;
 
-    for(i = 0; i < mMaxNodes_c; i++)
+    for(i = 0; i < MaxNodes; i++)
     {
         if(NodeTable[i].inUse)
         {
