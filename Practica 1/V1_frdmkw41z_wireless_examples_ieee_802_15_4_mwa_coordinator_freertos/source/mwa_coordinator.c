@@ -84,6 +84,32 @@ extern void Mac_SetExtendedAddress(uint8_t *pAddr, instanceId_t instanceId);
 * Private memory declarations
 *************************************************************************************
 ************************************************************************************/
+
+#define MaxNodes 5
+
+typedef struct
+{
+    bool_t   inUse;          /* Free space */
+    uint16_t shortAddress;
+    uint64_t extAddress;
+    bool_t   rxOnWhenIdle;         /* TRUE o FALSE */
+    bool_t   FFD_not_RFD;          /* TRUE = FFD, FALSE = RFD */
+} nodeInfo_t;
+
+static nodeInfo_t NodeTable[MaxNodes];
+static uint16_t   NextShortAddress = 0x0001;
+
+
+// Function to find a specific node in the table
+static int8_t App_FindNode(uint64_t extAddr);
+
+// Function to find a free slot in the table
+static int8_t App_FindFreeSlot(void);
+
+// Function to print information node
+static void App_PrintNode(int8_t idx);
+
+
 /* The short address and PAN ID of the coordinator*/
 static const uint16_t mShortAddress = mDefaultValueOfShortAddress_c;
 static const uint16_t mPanId = mDefaultValueOfPanId_c;
@@ -94,7 +120,7 @@ static uint8_t mLogicalChannel;
 /* These byte arrays stores an associated
    devices long and short addresses. */
 static uint16_t mDeviceShortAddress = 0xFFFF;
-static uint64_t mDeviceLongAddress = 0xFFFFFFFFFFFFFFFF;
+//static uint64_t mDeviceLongAddress = 0xFFFFFFFFFFFFFFFF;
 
 /* Data request packet for sending UART input to the coordinator */
 static nwkToMcpsMessage_t *mpPacket;
@@ -206,6 +232,10 @@ void App_init( void )
     Serial_SetBaudRate(interfaceId, gUARTBaudRate115200_c);
     Serial_SetRxCallBack(interfaceId, UartRxCallBack, NULL);
     
+    // Inicializar la red de nodos
+    FLib_MemSet(NodeTable, 0, sizeof(NodeTable));
+
+
     /*signal app ready*/  
     LED_StartSerialFlash(LED1);
     
@@ -708,9 +738,12 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
 {
   mlmeMessage_t *pMsg;
   mlmeAssociateRes_t *pAssocRes;
- 
+  uint64_t extAddr;
+  int8_t idx;
+  uint8_t cap;
+
   Serial_Print(interfaceId,"Sending the MLME-Associate Response message to the MAC...", gAllowToBlock_d);
- 
+
   /* Allocate a message for the MLME */
   pMsg = MSG_AllocType(mlmeMessage_t);
   if(pMsg != NULL)
@@ -721,33 +754,65 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
     /* Create the Associate response message data. */
     pAssocRes = &pMsg->msgData.associateRes;
 
-    /* Assign a short address to the device. In this example we simply
-       choose 0x0001. Though, all devices and coordinators in a PAN must have
-       different short addresses. However, if a device do not want to use
-       short addresses at all in the PAN, a short address of 0xFFFE must
-       be assigned to it. */
-    if(pMsgIn->msgData.associateInd.capabilityInfo & gCapInfoAllocAddr_c)
+    /* Capability flags sent by the node (FFD/RFD, RxOnWhenIdle, etc.) */
+    cap = pMsgIn->msgData.associateInd.capabilityInfo;
+
+    /* Copy the node's extended address (8 bytes) */
+    FLib_MemCpy(&extAddr, &pMsgIn->msgData.associateInd.deviceAddress, 8);
+
+    /* Look for the node in the table (-1 if not found) */
+    idx = App_FindNode(extAddr);
+
+    if(idx >= 0)
     {
-      /* Assign a unique short address less than 0xfffe if the device requests so. */
-      pAssocRes->assocShortAddress = 0x0001;
+        /* Known node: reuse its short address */
+        pAssocRes->assocShortAddress = NodeTable[idx].shortAddress;
+        pAssocRes->status = gSuccess_c;
+        App_PrintNode(idx);
+
     }
     else
     {
-      /* A short address of 0xfffe means that the device is granted access to
-         the PAN (Associate successful) but that long addressing is used.*/
-      pAssocRes->assocShortAddress = 0xFFFE;
+        /* New node: look for a free slot (-1 if table is full) */
+        idx = App_FindFreeSlot();
+
+        if(idx >= 0)
+        {
+            /* Store the new node */
+            NodeTable[idx].inUse = TRUE;
+            NodeTable[idx].shortAddress = NextShortAddress++;
+            NodeTable[idx].extAddress = extAddr;
+
+            /* Keep only the bit we need, save as TRUE/FALSE */
+            NodeTable[idx].rxOnWhenIdle = (cap & gCapInfoRxWhenIdle_c) ? TRUE : FALSE;
+
+            /* TRUE = FFD, FALSE = RFD */
+            NodeTable[idx].FFD_not_RFD = (cap & gCapInfoDeviceFfd_c) ? TRUE : FALSE;
+
+            /* Answer with the newly assigned short address */
+            pAssocRes->assocShortAddress = NodeTable[idx].shortAddress;
+            pAssocRes->status = gSuccess_c;
+            App_PrintNode(idx);
+        }
+        else
+        {
+            /* Table full: reject, no short address assigned */
+            pAssocRes->assocShortAddress = 0xFFFF;
+            pAssocRes->status = gPanAtCapacity_c;
+
+            /* Tell the user the node was rejected */
+            Serial_Print(interfaceId, "\n\rNode rejected: maximum number of nodes reached.\n\r  Extended Address: 0x", gAllowToBlock_d);
+            Serial_PrintHex(interfaceId, (uint8_t *)&extAddr, 8, gPrtHexNoFormat_c);
+            Serial_Print(interfaceId, "\n\r\n\r", gAllowToBlock_d);
+        }
     }
-    /* Get the 64 bit address of the device requesting association. */
-    FLib_MemCpy(&pAssocRes->deviceAddress, &pMsgIn->msgData.associateInd.deviceAddress, 8);
-    /* Association granted. May also be gPanAtCapacity_c or gPanAccessDenied_c. */
-    pAssocRes->status = gSuccess_c;
-    /* Do not use security */
+
+    /* Address of the node we are answering */
+    FLib_MemCpy(&pAssocRes->deviceAddress, &extAddr, 8);
+
+    /* No security */
     pAssocRes->securityLevel = gMacSecurityNone_c;
 
-    /* Save device info. */
-    FLib_MemCpy(&mDeviceShortAddress, &pAssocRes->assocShortAddress, 2);
-    FLib_MemCpy(&mDeviceLongAddress,  &pAssocRes->deviceAddress,     8);
-    
     /* Send the Associate Response to the MLME. */
     if( gSuccess_c == NWK_MLME_SapHandler( pMsg, macInstance ) )
     {
@@ -1042,4 +1107,52 @@ resultType_t MCPS_NWK_SapHandler (mcpsToNwkMessage_t* pMsg, instanceId_t instanc
   MSG_Queue(&mMcpsNwkInputQueue, pMsg);
   OSA_EventSet(mAppEvent, gAppEvtMessageFromMCPS_c);
   return gSuccess_c;
+}
+
+
+
+static int8_t App_FindNode(uint64_t extAddr)
+{
+    uint8_t i;
+    for(i = 0; i < MaxNodes; i++)
+    {
+        if(NodeTable[i].inUse && NodeTable[i].extAddress == extAddr)
+            return i;
+    }
+    return -1;
+}
+
+static int8_t App_FindFreeSlot(void)
+{
+    uint8_t i;
+    for(i = 0; i < MaxNodes; i++)
+    {
+        if(!NodeTable[i].inUse)
+            return i;
+    }
+    return -1;
+}
+
+static void App_PrintNode(int8_t idx)
+{
+  /* Short address */
+  Serial_Print(interfaceId, "\n\rNode joined:\n\r  Short Address: 0x", gAllowToBlock_d);
+  /* Short address */
+  Serial_PrintHex(interfaceId, (uint8_t *)&NodeTable[idx].shortAddress, 2, gPrtHexNoFormat_c);
+
+
+  /* Extended address */
+  Serial_Print(interfaceId, "\n\r  Extended Address: 0x", gAllowToBlock_d);
+  /* Extended address */
+  Serial_PrintHex(interfaceId, (uint8_t *)&NodeTable[idx].extAddress, 8, gPrtHexNoFormat_c);
+
+  /* RxOnWhenIdle */
+  Serial_Print(interfaceId, "\n\r  RxOnWhenIdle: ", gAllowToBlock_d);
+  Serial_Print(interfaceId, NodeTable[idx].rxOnWhenIdle ? "TRUE" : "FALSE", gAllowToBlock_d);
+
+  /* Device type */
+  Serial_Print(interfaceId, "\n\r  Device Type: ", gAllowToBlock_d);
+  Serial_Print(interfaceId, NodeTable[idx].FFD_not_RFD ? "FFD" : "RFD", gAllowToBlock_d);
+
+  Serial_Print(interfaceId, "\n\r\n\r", gAllowToBlock_d);
 }
