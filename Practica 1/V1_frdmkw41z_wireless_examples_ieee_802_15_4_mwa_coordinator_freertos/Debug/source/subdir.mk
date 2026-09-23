@@ -6,16 +6,19 @@
 C_SRCS += \
 ../source/mtb.c \
 ../source/mwa_coordinator.c \
+../source/my_new_task.c \
 ../source/semihost_hardfault.c 
 
 C_DEPS += \
 ./source/mtb.d \
 ./source/mwa_coordinator.d \
+./source/my_new_task.d \
 ./source/semihost_hardfault.d 
 
 OBJS += \
 ./source/mtb.o \
 ./source/mwa_coordinator.o \
+./source/my_new_task.o \
 ./source/semihost_hardfault.o 
 
 
@@ -31,7 +34,7 @@ source/%.o: ../source/%.c source/subdir.mk
 clean: clean-source
 
 clean-source:
-	-$(RM) ./source/mtb.d ./source/mtb.o ./source/mwa_coordinator.d ./source/mwa_coordinator.o ./source/semihost_hardfault.d ./source/semihost_hardfault.o
+	-$(RM) ./source/mtb.d ./source/mtb.o ./source/mwa_coordinator.d ./source/mwa_coordinator.o ./source/my_new_task.d ./source/my_new_task.o ./source/semihost_hardfault.d ./source/semihost_hardfault.o
 
 .PHONY: clean-source
 

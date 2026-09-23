@@ -86,6 +86,7 @@ extern void Mac_SetExtendedAddress(uint8_t *pAddr, instanceId_t instanceId);
 ************************************************************************************/
 
 #define MaxNodes 5
+#define MaxHistoryNodes   10
 
 typedef struct
 {
@@ -94,9 +95,10 @@ typedef struct
     uint64_t extAddress;
     bool_t   rxOnWhenIdle;         /* TRUE o FALSE */
     bool_t   FFD_not_RFD;          /* TRUE = FFD, FALSE = RFD */
+    uint8_t  missedCount;
 } nodeInfo_t;
 
-static nodeInfo_t NodeTable[MaxNodes];
+static nodeInfo_t NodeTable[MaxHistoryNodes];
 static uint16_t   NextShortAddress = 0x0001;
 
 
@@ -108,6 +110,8 @@ static int8_t App_FindFreeSlot(void);
 
 // Function to print information node
 static void App_PrintNode(int8_t idx);
+
+static uint8_t App_CountActive(void);
 
 
 /* The short address and PAN ID of the coordinator*/
@@ -744,76 +748,92 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
 
   Serial_Print(interfaceId,"Sending the MLME-Associate Response message to the MAC...", gAllowToBlock_d);
 
-  /* Allocate a message for the MLME */
   pMsg = MSG_AllocType(mlmeMessage_t);
   if(pMsg != NULL)
   {
-    /* This is a MLME-ASSOCIATE.res command */
     pMsg->msgType = gMlmeAssociateRes_c;
-
-    /* Create the Associate response message data. */
     pAssocRes = &pMsg->msgData.associateRes;
 
-    /* Capability flags sent by the node (FFD/RFD, RxOnWhenIdle, etc.) */
     cap = pMsgIn->msgData.associateInd.capabilityInfo;
-
-    /* Copy the node's extended address (8 bytes) */
     FLib_MemCpy(&extAddr, &pMsgIn->msgData.associateInd.deviceAddress, 8);
 
-    /* Look for the node in the table (-1 if not found) */
     idx = App_FindNode(extAddr);
 
-    if(idx >= 0)
+    if(idx >= 0 && NodeTable[idx].inUse)
     {
-        /* Known node: reuse its short address */
+        /* Already connected right now: just answer with its address */
         pAssocRes->assocShortAddress = NodeTable[idx].shortAddress;
         pAssocRes->status = gSuccess_c;
         App_PrintNode(idx);
-
     }
-    else
+    else if(idx >= 0 && !NodeTable[idx].inUse)
     {
-        /* New node: look for a free slot (-1 if table is full) */
-        idx = App_FindFreeSlot();
-
-        if(idx >= 0)
+        /* Known node, currently disconnected: reconnect if there is active room */
+        if(App_CountActive() < MaxNodes)
         {
-            /* Store the new node */
             NodeTable[idx].inUse = TRUE;
-            NodeTable[idx].shortAddress = NextShortAddress++;
-            NodeTable[idx].extAddress = extAddr;
+            NodeTable[idx].missedCount = 0;
 
-            /* Keep only the bit we need, save as TRUE/FALSE */
-            NodeTable[idx].rxOnWhenIdle = (cap & gCapInfoRxWhenIdle_c) ? TRUE : FALSE;
-
-            /* TRUE = FFD, FALSE = RFD */
-            NodeTable[idx].FFD_not_RFD = (cap & gCapInfoDeviceFfd_c) ? TRUE : FALSE;
-
-            /* Answer with the newly assigned short address */
             pAssocRes->assocShortAddress = NodeTable[idx].shortAddress;
             pAssocRes->status = gSuccess_c;
             App_PrintNode(idx);
         }
         else
         {
-            /* Table full: reject, no short address assigned */
             pAssocRes->assocShortAddress = 0xFFFF;
             pAssocRes->status = gPanAtCapacity_c;
 
-            /* Tell the user the node was rejected */
-            Serial_Print(interfaceId, "\n\rNode rejected: maximum number of nodes reached.\n\r  Extended Address: 0x", gAllowToBlock_d);
+            Serial_Print(interfaceId, "\n\rNode rejected: maximum active nodes reached.\n\r  Extended Address: 0x", gAllowToBlock_d);
             Serial_PrintHex(interfaceId, (uint8_t *)&extAddr, 8, gPrtHexNoFormat_c);
             Serial_Print(interfaceId, "\n\r\n\r", gAllowToBlock_d);
         }
     }
+    else
+    {
+        /* Brand new node: check active room first */
+        if(App_CountActive() >= MaxNodes)
+        {
+            pAssocRes->assocShortAddress = 0xFFFF;
+            pAssocRes->status = gPanAtCapacity_c;
 
-    /* Address of the node we are answering */
+            Serial_Print(interfaceId, "\n\rNode rejected: maximum active nodes reached.\n\r  Extended Address: 0x", gAllowToBlock_d);
+            Serial_PrintHex(interfaceId, (uint8_t *)&extAddr, 8, gPrtHexNoFormat_c);
+            Serial_Print(interfaceId, "\n\r\n\r", gAllowToBlock_d);
+        }
+        else
+        {
+            /* Look for a free slot in the history table (-1 if full) */
+            idx = App_FindFreeSlot();
+
+            if(idx >= 0)
+            {
+                NodeTable[idx].inUse = TRUE;
+                NodeTable[idx].shortAddress = NextShortAddress++;
+                NodeTable[idx].extAddress = extAddr;
+                NodeTable[idx].rxOnWhenIdle = (cap & gCapInfoRxWhenIdle_c) ? TRUE : FALSE;
+                NodeTable[idx].FFD_not_RFD = (cap & gCapInfoDeviceFfd_c) ? TRUE : FALSE;
+                NodeTable[idx].missedCount = 0;
+
+                pAssocRes->assocShortAddress = NodeTable[idx].shortAddress;
+                pAssocRes->status = gSuccess_c;
+                App_PrintNode(idx);
+            }
+            else
+            {
+                /* History full: 10 different cards already known */
+                pAssocRes->assocShortAddress = 0xFFFF;
+                pAssocRes->status = gPanAtCapacity_c;
+
+                Serial_Print(interfaceId, "\n\rNode rejected: history full.\n\r  Extended Address: 0x", gAllowToBlock_d);
+                Serial_PrintHex(interfaceId, (uint8_t *)&extAddr, 8, gPrtHexNoFormat_c);
+                Serial_Print(interfaceId, "\n\r\n\r", gAllowToBlock_d);
+            }
+        }
+    }
+
     FLib_MemCpy(&pAssocRes->deviceAddress, &extAddr, 8);
-
-    /* No security */
     pAssocRes->securityLevel = gMacSecurityNone_c;
 
-    /* Send the Associate Response to the MLME. */
     if( gSuccess_c == NWK_MLME_SapHandler( pMsg, macInstance ) )
     {
       Serial_Print( interfaceId,"Done\n\r", gAllowToBlock_d );
@@ -821,14 +841,12 @@ static uint8_t App_SendAssociateResponse(nwkMessage_t *pMsgIn, uint8_t appInstan
     }
     else
     {
-      /* One or more parameters in the message were invalid. */
       Serial_Print( interfaceId,"Invalid parameter!\n\r", gAllowToBlock_d );
       return errorInvalidParameter;
     }
   }
   else
   {
-    /* Allocation of a message buffer failed. */
     Serial_Print(interfaceId,"Message allocation failed!\n\r", gAllowToBlock_d);
     return errorAllocFailed;
   }
@@ -882,6 +900,23 @@ static void App_HandleMcpsInput(mcpsToNwkMessage_t *pMsgIn, uint8_t appInstance)
     break;
 
   case gMcpsDataInd_c:
+
+
+      /* Find which node sent this and reset its missed counter */
+      {
+          uint16_t srcAddr = pMsgIn->msgData.dataInd.srcAddr;
+          uint8_t i;
+
+          for(i = 0; i < MaxHistoryNodes; i++)
+          {
+              if(NodeTable[i].inUse && NodeTable[i].shortAddress == srcAddr)
+              {
+                  NodeTable[i].missedCount = 0;
+                  break;
+              }
+          }
+      }
+
 	/* The MCPS-Data indication is sent by the MAC to the network
        or application layer when data has been received. We simply
        copy the received data to the UART.
@@ -1114,7 +1149,7 @@ resultType_t MCPS_NWK_SapHandler (mcpsToNwkMessage_t* pMsg, instanceId_t instanc
 static int8_t App_FindNode(uint64_t extAddr)
 {
     uint8_t i;
-    for(i = 0; i < MaxNodes; i++)
+    for(i = 0; i < MaxHistoryNodes; i++)
     {
         if(NodeTable[i].inUse && NodeTable[i].extAddress == extAddr)
             return i;
@@ -1125,13 +1160,26 @@ static int8_t App_FindNode(uint64_t extAddr)
 static int8_t App_FindFreeSlot(void)
 {
     uint8_t i;
-    for(i = 0; i < MaxNodes; i++)
+    for(i = 0; i < MaxHistoryNodes; i++)
     {
         if(!NodeTable[i].inUse)
             return i;
     }
     return -1;
 }
+
+static uint8_t App_CountActive(void)
+{
+    uint8_t i, count = 0;
+
+    for(i = 0; i < MaxHistoryNodes; i++)
+    {
+        if(NodeTable[i].inUse)
+            count++;
+    }
+    return count;
+}
+
 
 static void App_PrintNode(int8_t idx)
 {
